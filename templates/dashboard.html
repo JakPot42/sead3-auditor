@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set active = 'dashboard' %}
+{% block title %}FSO Dashboard &middot; {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="page-head">
+    <h2>FSO Compliance Dashboard</h2>
+    <p>All self-disclosed reportable events, with automatically computed SEAD 3
+       compliance status.</p>
+  </div>
+
+  <!-- summary stats -->
+  <div class="stats">
+    <div class="stat"><div class="n">{{ counts.total }}</div><div class="l">Total Records</div></div>
+    <div class="stat is-ok"><div class="n">{{ counts.ontime }}</div><div class="l">On-Time</div></div>
+    <div class="stat is-warn"><div class="n">{{ counts.warning }}</div><div class="l">Warnings</div></div>
+    <div class="stat is-late"><div class="n">{{ counts.late }}</div><div class="l">Late / Violation</div></div>
+  </div>
+
+  <!-- filter tabs -->
+  <div class="filters">
+    {% for f in filters %}
+      <a href="/dashboard?status={{ f | urlencode }}"
+         class="{{ 'active' if active_filter==f else '' }}">{{ f }}</a>
+    {% endfor %}
+  </div>
+
+  <form method="post" action="/diss-export">
+    <div class="toolbar">
+      <div class="export-note">
+        <strong>DISS Mass Foreign Travel export:</strong> tick approved
+        <em>Foreign Travel</em> records, then export. Dates are written as
+        <span class="mono">YYYY/MM/DD</span>; missing mandatory fields are stamped
+        <span class="mono">REVIEW-REQUIRED</span>. Column layout is a placeholder &mdash;
+        confirm against the current DCSA template before uploading.
+      </div>
+      <button type="submit" class="btn btn-accent">&darr; Download DISS Bulk Upload CSV</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px"></th>
+            <th>Employee</th>
+            <th>SSN</th>
+            <th>Event Type</th>
+            <th>Date of Event</th>
+            <th>Submitted</th>
+            <th>Deadline</th>
+            <th>Status</th>
+            <th>Approved</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr class="{{ 'highlight' if highlight and highlight==log.id else '' }}">
+            <td>
+              {% if log.event_type == travel_type %}
+                <input class="chk" type="checkbox" name="selected_ids" value="{{ log.id }}"
+                       {{ 'disabled' if not log.approved else '' }}
+                       title="{{ 'Approve first to enable export' if not log.approved else 'Include in DISS export' }}">
+              {% endif %}
+            </td>
+            <td>
+              {{ log.employee.full_name }}
+              {% if log.destination_country %}
+                <div class="subtle">&rarr; {{ log.destination_country }}</div>
+              {% endif %}
+            </td>
+            <td class="mono">{{ log.employee.ssn | mask_ssn }}</td>
+            <td>{{ log.event_type }}</td>
+            <td class="mono">{{ log.event_date.strftime('%Y-%m-%d') }}</td>
+            <td class="mono">{{ log.submission_date.strftime('%Y-%m-%d') }}</td>
+            <td class="mono">{{ log.reporting_deadline.strftime('%Y-%m-%d') }}</td>
+            <td>
+              <span class="{{ log.compliance_status | status_badge }}">
+                {{ 'LATE - VIOLATION' if log.compliance_status == 'Late' else log.compliance_status }}
+              </span>
+            </td>
+            <td>
+              {% if log.event_type == travel_type %}
+                {{ '✓' if log.approved else '—' }}
+              {% else %}
+                <span class="subtle">n/a</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="btn-row" style="margin:0">
+                <a class="btn btn-ghost btn-sm" href="/pdf/{{ log.id }}" target="_blank">PDF</a>
+                {% if log.event_type == travel_type %}
+                  <button class="btn btn-ghost btn-sm" type="submit"
+                          formaction="/toggle-approve/{{ log.id }}" formmethod="post"
+                          name="status" value="{{ active_filter }}">
+                    {{ 'Unapprove' if log.approved else 'Approve' }}
+                  </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="10" class="empty">
+            No records yet.
+            <button class="btn btn-ghost btn-sm" type="submit" formaction="/seed" formmethod="post">
+              Load demo data
+            </button>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+{% endblock %}

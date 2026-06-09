@@ -1,0 +1,26 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- Virtual environment (never commit this) ---
+venv/
+.venv/
+env/
+
+# --- App data: the live database holds (synthetic) PII; keep it out of git ---
+*.db
+sead3_auditor.db
+
+# --- Generated / local artifacts ---
+*.csv
+!requirements.txt
+SAMPLE_*.pdf
+*.log
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

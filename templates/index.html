@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% set active = 'submit' %}
+{% block title %}Report a Reportable Event &middot; {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="wrap wrap--narrow">
+  <div class="page-head">
+    <h2>Report a Reportable Event</h2>
+    <p>Describe your event in plain language. The system will pre-fill a structured
+       form for you to verify before it reaches the FSO.</p>
+  </div>
+
+  {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+  <div class="card">
+    <h3>Self-Disclosure</h3>
+    <form method="post" action="/parse">
+      <div class="grid-2">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" name="full_name" required
+                 value="{{ form.full_name if form else '' }}"
+                 placeholder="Last, First or First Last">
+        </div>
+        <div class="field">
+          <label>SSN <span class="hint">(masked in all views; required for DISS)</span></label>
+          <input type="text" name="ssn" required class="mono"
+                 value="{{ form.ssn if form else '' }}"
+                 placeholder="###-##-####">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Passport Number <span class="hint">(optional, for travel)</span></label>
+          <input type="text" name="passport_number" class="mono"
+                 value="{{ form.passport_number if form else '' }}">
+        </div>
+        <div class="field">
+          <label>Date of Birth <span class="hint">(optional)</span></label>
+          <input type="date" name="date_of_birth"
+                 value="{{ form.date_of_birth if form else '' }}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Describe Your Event</label>
+        <textarea name="raw_input" required
+          placeholder="e.g. I am traveling to London on July 25th — or — I opened a foreign bank account on 03/15/2026">{{ form.raw_input if form else '' }}</textarea>
+        <span class="hint">Examples: foreign travel, foreign bank account, cohabitation,
+          marriage, foreign cash/currency import, continuing foreign contact.</span>
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">Parse &amp; Review &rarr;</button>
+        <a href="/dashboard" class="btn btn-ghost">FSO Dashboard</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

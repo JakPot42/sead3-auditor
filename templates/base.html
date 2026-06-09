@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_title }}{% endblock %}</title>
+  <!-- Local stylesheet only; no external CDN (air-gap safe). -->
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  {% if demo_mode %}<div class="demobar">{{ demo_banner }}</div>{% endif %}
+  <div class="classbar">{{ classification_banner }}</div>
+
+  <nav class="nav">
+    <div class="brand">
+      <div class="seal">S3</div>
+      <div>
+        <h1>SEAD 3 Compliance Auditor</h1>
+        <div class="sub">{{ org_name }} &middot; Office of the FSO</div>
+      </div>
+    </div>
+    <div class="links">
+      <a href="/" class="{{ 'active' if active=='submit' else '' }}">Report an Event</a>
+      <a href="/dashboard" class="{{ 'active' if active=='dashboard' else '' }}">FSO Dashboard</a>
+    </div>
+  </nav>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="app-foot">
+    Records protected under the Privacy Act of 1974 (5&nbsp;U.S.C.&nbsp;552a). Contains PII.
+  </footer>
+  <div class="classbar classbar--bottom">{{ classification_banner }}</div>
+</body>
+</html>

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% set active = 'submit' %}
+{% block title %}Verify Parsed Event &middot; {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="wrap wrap--narrow">
+  <div class="page-head">
+    <h2>Verify &amp; Confirm</h2>
+    <p>We parsed your description below. <strong>Check every field</strong> and correct
+       anything the parser got wrong before submitting to the FSO.</p>
+  </div>
+
+  <div class="parsed-box">
+    <strong>Parser notes</strong> (heuristic &mdash; always verify):
+    <ul>
+      {% for note in parsed.confidence_notes %}<li>{{ note }}</li>{% endfor %}
+    </ul>
+  </div>
+
+  {% if provisional %}
+  <div class="determination
+       {{ 'det-late' if provisional.status.value=='Late'
+          else 'det-warning' if provisional.status.value=='Warning'
+          else 'det-ontime' if provisional.status.value=='On-Time'
+          else 'det-pending' }}">
+    Provisional determination: {{ provisional.status.value | upper }}
+    <small>{{ provisional.explanation }}</small>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3>Confirm Event Details</h3>
+    <form method="post" action="/submit">
+      <!-- identity carried through hidden, shown read-only for confidence -->
+      <input type="hidden" name="full_name" value="{{ req.full_name }}">
+      <input type="hidden" name="ssn" value="{{ req.ssn }}">
+      <input type="hidden" name="raw_input" value="{{ req.raw_input }}">
+      <input type="hidden" name="passport_number" value="{{ req.passport_number or '' }}">
+      <input type="hidden" name="date_of_birth" value="{{ req.date_of_birth or '' }}">
+      <input type="hidden" name="badge_id" value="{{ req.badge_id or '' }}">
+
+      <div class="parsed-box">
+        Reporting as <strong>{{ req.full_name }}</strong>
+        &middot; SSN <span class="mono">{{ req.ssn | mask_ssn }}</span>
+      </div>
+
+      <div class="field">
+        <label>Event Type</label>
+        <select name="event_type" id="event_type" required>
+          {% for et in event_types %}
+            <option value="{{ et }}"
+              {{ 'selected' if parsed.event_type and parsed.event_type.value==et else '' }}>
+              {{ et }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label id="event_date_label">Date of Event / Departure</label>
+          <input type="date" name="event_date" required
+                 value="{{ parsed.event_date.isoformat() if parsed.event_date else '' }}">
+        </div>
+        <div class="field" id="return_wrap">
+          <label>Return Date <span class="hint">(travel only)</span></label>
+          <input type="date" name="return_date" value="">
+        </div>
+      </div>
+
+      <div class="field" id="dest_wrap">
+        <label>Destination Country <span class="hint">(travel only)</span></label>
+        <input type="text" name="destination_country"
+               value="{{ parsed.destination_country or '' }}"
+               placeholder="e.g. United Kingdom">
+      </div>
+
+      <div class="field">
+        <label>Details / Verbatim Disclosure</label>
+        <textarea name="details">{{ parsed.details or req.raw_input }}</textarea>
+      </div>
+
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">Submit to FSO</button>
+        <a href="/" class="btn btn-ghost">&larr; Start Over</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Show travel-only fields only when the event type is Foreign Travel.
+  (function () {
+    var sel = document.getElementById('event_type');
+    var dest = document.getElementById('dest_wrap');
+    var ret  = document.getElementById('return_wrap');
+    var lbl  = document.getElementById('event_date_label');
+    function sync() {
+      var travel = sel.value === 'Foreign Travel';
+      dest.style.display = travel ? '' : 'none';
+      ret.style.display  = travel ? '' : 'none';
+      lbl.textContent = travel ? 'Departure Date' : 'Date of Event';
+    }
+    sel.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+{% endblock %}
