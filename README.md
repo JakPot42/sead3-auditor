@@ -16,6 +16,18 @@ external assets) so it can operate in a closed/air-gapped environment.
 
 ---
 
+## Live demo
+
+**[▶ Launch demo →](https://sead3-auditor.onrender.com)**
+*(free Render tier — first load may take ~30 s to wake from sleep)*
+
+Once the page loads, click **Load demo data** on the FSO Dashboard to populate
+three sample employees with on-time, warning, and late submissions. From there
+you can generate PDF compliance briefs, toggle FSO approval, and export a DISS
+bulk-upload CSV.
+
+---
+
 ## Why this project
 
 I'm interested in working in the defense/national-security space, so I built
