@@ -44,15 +44,53 @@ from config import (
     ComplianceStatus,
     EventType,
 )
-from database import get_db, init_db
+from database import SessionLocal, get_db, init_db
 from helpers import mask_ssn, status_badge_class
 from models import Employee, EventLog, ParseRequest, SubmitRequest
 from pdf_generator import build_compliance_brief
+
+def _load_seed_data(db: Session) -> None:
+    today = _dt.date.today()
+    demo = [
+        ("Dana Whitfield", "123456789", _dt.date(1988, 4, 12), "X1234567",
+         EventType.FOREIGN_TRAVEL, today + _dt.timedelta(days=47),
+         today + _dt.timedelta(days=54), "United Kingdom",
+         "Traveling to London for a family wedding."),
+        ("Ortega, Sam", "987654321", _dt.date(1979, 11, 3), None,
+         EventType.FOREIGN_TRAVEL, today + _dt.timedelta(days=9),
+         today + _dt.timedelta(days=16), "France",
+         "Last-minute trip to Paris next week."),
+        ("Priya Nair", "555443333", _dt.date(1992, 1, 22), "P7654321",
+         EventType.FOREIGN_BANK_ACCOUNT, today - _dt.timedelta(days=18), None,
+         None, "Opened a foreign brokerage account."),
+    ]
+    for name, ssn, dob, passport, etype, edate, rdate, dest, text in demo:
+        if db.scalar(select(Employee).where(Employee.ssn == ssn)):
+            continue
+        emp = Employee(full_name=name, ssn=ssn, date_of_birth=dob, passport_number=passport)
+        db.add(emp)
+        db.flush()
+        res = assess_compliance(etype, edate)
+        db.add(EventLog(
+            employee_id=emp.id, raw_input=text, event_type=etype.value,
+            event_date=edate, return_date=rdate, destination_country=dest,
+            details=text, submission_date=today,
+            reporting_deadline=res.reporting_deadline,
+            compliance_status=res.status.value, days_delta=res.days_delta,
+            approved=(etype == EventType.FOREIGN_TRAVEL),
+        ))
+    db.commit()
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Create tables on startup (idempotent). Replaces the deprecated on_event hook.
     init_db()
+    db = SessionLocal()
+    try:
+        _load_seed_data(db)
+    finally:
+        db.close()
     yield
 
 
@@ -338,37 +376,6 @@ def diss_export_route(
 # --------------------------------------------------------------------------- #
 @app.post("/seed")
 def seed(db: Session = Depends(get_db)):
-    """Insert a few illustrative records (idempotent-ish; safe to re-run)."""
-    today = _dt.date.today()
-    demo = [
-        # (name, ssn, dob, passport, type, event_date, return_date, dest, text)
-        ("Dana Whitfield", "123456789", _dt.date(1988, 4, 12), "X1234567",
-         EventType.FOREIGN_TRAVEL, today + _dt.timedelta(days=47),
-         today + _dt.timedelta(days=54), "United Kingdom",
-         "Traveling to London for a family wedding."),
-        ("Ortega, Sam", "987654321", _dt.date(1979, 11, 3), None,
-         EventType.FOREIGN_TRAVEL, today + _dt.timedelta(days=9),
-         today + _dt.timedelta(days=16), "France",
-         "Last-minute trip to Paris next week."),
-        ("Priya Nair", "555443333", _dt.date(1992, 1, 22), "P7654321",
-         EventType.FOREIGN_BANK_ACCOUNT, today - _dt.timedelta(days=18), None,
-         None, "Opened a foreign brokerage account."),
-    ]
-    for name, ssn, dob, passport, etype, edate, rdate, dest, text in demo:
-        if db.scalar(select(Employee).where(Employee.ssn == ssn)):
-            continue
-        emp = Employee(full_name=name, ssn=ssn, date_of_birth=dob,
-                       passport_number=passport)
-        db.add(emp)
-        db.flush()
-        res = assess_compliance(etype, edate)
-        db.add(EventLog(
-            employee_id=emp.id, raw_input=text, event_type=etype.value,
-            event_date=edate, return_date=rdate, destination_country=dest,
-            details=text, submission_date=today,
-            reporting_deadline=res.reporting_deadline,
-            compliance_status=res.status.value, days_delta=res.days_delta,
-            approved=(etype == EventType.FOREIGN_TRAVEL),
-        ))
-    db.commit()
+    """Insert illustrative demo records (idempotent)."""
+    _load_seed_data(db)
     return RedirectResponse(url="/dashboard", status_code=303)
